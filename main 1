@@ -1,0 +1,232 @@
+import importlib
+import os
+from tkinter import *
+
+win = Tk()
+win.title("Bank")
+win.geometry("434x250")
+win.attributes("-topmost", True)
+win.config(bg="#1e1e1e")
+
+# WINDOW FUNCTIONS --------------------------------------------------------
+def Exit(event):
+    win.destroy()
+win.bind("<Escape>", Exit)
+
+def ClearMain():
+    for widget in win.winfo_children():
+        widget.destroy()
+
+# FRONT-END FUNCTIONS -----------------------------------------------------
+
+def UpdateCurDisplay(newDisplay):
+    Current.config(text=f"Current: {newDisplay}$")
+
+
+# BACK-END FUNCTIONS ------------------------------------------------------
+def ErrorStable(error, position = 6):
+    global Err
+
+    Err = Label(win, text=f"Invalid: {error}", fg="Red")
+    Err.grid(row=position, column=0, columnspan=10, sticky="ew")
+
+def GetIn():
+    return Amount.get()
+
+# 
+def Cret():
+    name = UserNameIn.get().strip()
+    password = UserPassIn.get()
+    global AmountIn 
+    amount = AmountIn.get().strip()
+
+    if not name or not password or not amount:
+        ErrorStable("Fill all fields!", 5)
+        return
+
+    try:
+        amount = int(amount)
+    except ValueError:
+        ErrorStable("Amount must be number!", 5)
+        return
+
+    if amount < 0:
+        ErrorStable("Cannot be negative!", 5)
+        return
+
+    os.makedirs("USERS", exist_ok=True)
+
+    path = f"USERS/{name}.py"
+    if os.path.exists(path):
+        ErrorStable("User already exists!", 5)
+        return
+
+    with open(path, "w") as f:
+        f.write(f"amount = {amount}\npassword = \"{password}\"")
+
+def Depo():
+    amount = GetIn()
+
+    if not amount.strip():
+        ErrorStable("Empty input!")
+        return
+
+    try:
+        amount = int(amount)
+    except ValueError:
+        ErrorStable("Invalid number!")
+        return
+
+    if amount < 0:
+        ErrorStable("Negative not allowed!")
+        return
+
+    if not os.path.exists(f"USERS/{Name}.py"):
+        ErrorStable("User not found!")
+        return
+
+    loc = f"USERS.{Name}"
+    userAcc = importlib.import_module(loc)
+    importlib.reload(userAcc)
+
+    curAmount = getattr(userAcc, "amount")
+    userPass = getattr(userAcc, "password")
+
+    curAmount += amount
+
+    with open(f"USERS/{Name}.py", "w") as f:
+        f.write(f"amount = {curAmount}\npassword = \"{userPass}\"")
+
+    UpdateCurDisplay(curAmount)
+
+def Withdraw():
+    amount = GetIn()
+
+    if not amount.strip():
+        ErrorStable("Empty input!")
+        return
+
+    try:
+        amount = int(amount)
+    except ValueError:
+        ErrorStable("Invalid number!")
+        return
+
+    if amount < 0:
+        ErrorStable("Negative not allowed!")
+        return
+
+    if not os.path.exists(f"USERS/{Name}.py"):
+        ErrorStable("User not found!")
+        return
+
+    loc = f"USERS.{Name}"
+    userAcc = importlib.import_module(loc)
+    importlib.reload(userAcc)
+
+    curAmount = getattr(userAcc, "amount")
+    userPass = getattr(userAcc, "password")
+
+    if curAmount - amount < 0:
+        ErrorStable("Insufficient balance!")
+        return
+
+    curAmount -= amount
+
+    with open(f"USERS/{Name}.py", "w") as f:
+        f.write(f"amount = {curAmount}\npassword = \"{userPass}\"")
+
+    UpdateCurDisplay(curAmount)
+
+def LogCheck():
+    global Name
+
+    name = UserNameIn.get().strip()
+    password = UserPassIn.get()
+
+    if not os.path.exists(f"USERS/{name}.py"):
+        ErrorStable("Wrong username!", 5)
+        return
+
+    try:
+        userAccount = importlib.import_module(f"USERS.{name}")
+        importlib.reload(userAccount)
+
+        getPass = getattr(userAccount, "password")
+
+        if password == getPass:
+            Name = name
+            amount = getattr(userAccount, "amount")
+            ClearMain()
+            Main(name, amount)
+        else:
+            ErrorStable("Wrong password!", 5)
+
+    except:
+        ErrorStable("Login error!", 5)
+
+# PAGES -------------------------------------------------------------------
+
+def Log():
+    global UserNameIn, UserPassIn, Amount
+
+    win.columnconfigure(1, weight=1)
+
+    Label(win, text="Bank", padx=193, bg="#0D1A63",
+          fg="white", font=("Times", 20, "italic"), pady=10)\
+        .grid(row=0, column=0, columnspan=2, sticky="ew")
+
+    Label(win, text="Username:", bg="#1e1e1e", fg="white")\
+        .grid(row=1, column=0)
+    UserNameIn = Entry(win)
+    UserNameIn.grid(row=1, column=1, sticky="ew")
+
+    Label(win, text="Password:", bg="#1e1e1e", fg="white")\
+        .grid(row=2, column=0)
+    UserPassIn = Entry(win, show="*")
+    UserPassIn.grid(row=2, column=1, sticky="ew")
+
+    Label(win, text="Amount:", bg="#1e1e1e", fg="white")\
+        .grid(row=3, column=0)
+    global AmountIn
+    AmountIn = Entry(win)
+    AmountIn.grid(row=3, column=1, sticky="ew")
+
+    Button(win, text="Login", command=LogCheck)\
+        .grid(row=4, column=0, columnspan=2, sticky="ew")
+
+    
+    Button(win, text="Create Account", command=Cret)\
+        .grid(row=5, column=0, columnspan=2, sticky="ew")
+
+    UserNameIn.focus_set()
+
+def Main(user, amount):
+    global Name, Amount, Current
+
+    Name = user
+
+    Label(win, text=f"Welcome, {Name}!", padx=193, bg="#0D1A63",
+          fg="white", font=("Times", 20, "italic"), pady=10)\
+        .grid(row=0, column=0, columnspan=2, sticky="ew")
+
+    Label(win, text="Amount:", bg="#1e1e1e", fg="white")\
+        .grid(row=1, column=0)
+
+    Amount = Entry(win)
+    Amount.grid(row=1, column=1, sticky="ew")
+
+    Button(win, text="Deposit", command=Depo)\
+        .grid(row=2, column=0, columnspan=2, sticky="ew")
+
+    Button(win, text="Withdraw", command=Withdraw)\
+        .grid(row=3, column=0, columnspan=2, sticky="ew")
+
+    Current = Label(win, text=f"Current: {amount}$",
+                    bg="#1e1e1e", fg="white")
+    Current.grid(row=4, column=0, columnspan=2, sticky="ew")
+
+# START -------------------------------------------------------------------
+
+Log()
+win.mainloop()
